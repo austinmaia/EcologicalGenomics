@@ -1,0 +1,10 @@
+---
+title: "Ecological Genomics Notes"
+author: "Maia Austin"
+date: "9/1/2021"
+output: html_document
+---
+##Lecture 2 
+GitHub Setup
+Access server: ssh netID@pbio381@uvm.edu
+
