@@ -4,7 +4,206 @@ author: "Maia Austin"
 date: "9/1/2021"
 output: html_document
 ---
-##Lecture 2 
+# MICROBIOME
+
+## Tutorial 1 
 GitHub Setup
-Access server: ssh netID@pbio381@uvm.edu
+Access server: ssh netID@pbio381.uvm.edu
+
+## Tutorial 2
+wd: pwd
+change directories: cd /data/ (root)
+change directories (not root): cd project_data/
+list files and directories in wd: ll
+go back to last place: cd ..
+autofill: type in part of title (pr...) then hit tab
+arrow up/down: navigate between past commands
+16s data: /data/project_data/16s
+get into gz files: zcat SS15_08_R1.fq.gz | head -n4
+  4 lines: 
+    1. info about read (begins with '@')
+    2. DNA sequence, 
+    3. more metadata (begins with '+')
+    4. quality info (same # characters as line 2)
+
+access file: less [file_name] OR vim [file_name]
+quit: :q
+stop text wrapping: :set nowrap
+go back to home directory: cd~
+make directory: mkdir [name]
+Activate qiime: 
+
+ssh maustin7@pbio381.uvm.edu
+conda activate qiime2-2021.8
+
+
+
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path /data/project_data/16S/pyc_subset_manifest \
+  --input-format PairedEndFastqManifestPhred33V2 \
+  --output-path demux-paired-end_full.qza
+
+
+## Tutorial 3
+
+#### View qiime file:
+
+qiime demux summarize \
+  --i-data demux-paired-end.qza \      
+  --o-visualization demux-pyc-sub.qzv
+
+
+#### File transfer:
+
+scp maustin7@pbio381.uvm.edu:~/myresults/*.qzv .
+
+Enter screen: screen [enter]
+  deattach before closing: [ctrl][a][d]
+  reattach: screen -r
+
+
+#### Denoise:
+
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs demux-paired-end_full.qza \
+  --p-n-threads 1 \
+  --p-trim-left-f 16 \
+  --p-trim-left-r 0 \
+  --p-trunc-len-f 278 \
+  --p-trunc-len-r 232 \
+  --o-table table.qza \
+  --o-representative-sequences rep-seqs.qza \
+  --o-denoising-stats denoising-stats.qza
+
+
+Forward - 16-278
+Reverse - 0-232
+
+#### View denoising info:
+
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file /data/project_data/16S/pyc_manifest
+
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+qiime metadata tabulate \
+  --m-input-file denoising-stats.qza \
+  --o-visualization denoising-stats.qzv
+
+
+## Tutorial 4
+Decide sampling depth by looking at table.qzv
+
+### What questions can we ask/address with these data?
+1. lower alpha and higher beta in sick
+2. less diversity in sick
+3. more maladaptive in sick
+4. does site or health status impact diversity/composition more
+5. shift from healthy to sick
+6. healthy at impacted vs healthy at naive
+7. site specific healthy vs. sick
+
+#### Build phylogenetic tree:
+
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+#### Diversity matrices:
+
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table.qza \
+  --p-sampling-depth 18000 \
+  --m-metadata-file pyc_manifest \
+  --output-dir core-metrics-results
+
+Sampling depth: 18000
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/faith_pd_vector.qza \
+  --m-metadata-file pyc_manifest \
+  --o-visualization core-metrics-results/faith-pd-group-significance.qzv
+  
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/evenness_vector.qza \
+  --m-metadata-file pyc_manifest \
+  --o-visualization core-metrics-results/evenness-group-significance.qzv
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/weighted_unifrac_distance_matrix.qza \
+  --m-metadata-file pyc_manifest \
+  --m-metadata-column site-animal-health \
+  --o-visualization core-metrics-results/weighted-unifrac-site-animal-health-significance.qzv \
+  --p-pairwise
+
+qiime diversity alpha-rarefaction \
+  --i-table table.qza \
+  --i-phylogeny rooted-tree.qza \
+  --p-max-depth 100000 \
+  --m-metadata-file pyc_manifest \
+  --o-visualization alpha-rarefaction.qzv
+
+#### Taxonomic ID
+https://pespenilab.github.io/Ecological-Genomics/2021_09_27_microbiome_supp_taxaID.html
+
+qiime feature-classifier classify-sklearn \
+  --i-classifier /data/project_data/16S/training-feature-classifiers/classifier.qza \
+  --i-reads /users/m/a/maustin7/myresults/rep-seqs.qza \
+  --o-classification taxonomy.qza
+  
+qiime taxa barplot \
+  --i-table table.qza \
+  --i-taxonomy /users/m/a/maustin7/training-feature-classifiers/taxonomy.qza \
+  --m-metadata-file pyc_manifest \
+  --o-visualization taxa-bar-plots.qzv
+  
+Note: look to tutorial for more stats on abundance
+
+# RNASeq
+## Tutorial 1
+Identify SNPs from RNASeq data
+Looking at 4 conditions of Acartia Hudsonica:
+1. ocean acidification (1000 micro-atm pCO2, ambient temperature, 13 degrees C)
+2. ocean warming (15 degrees C, 400 micro-atm pCO2)
+3. combined ocean acidification and warming (1000 micro-atm pCO2, 15 degrees C)
+4. ambient (13 degrees C, 400 micro-atm pCO2)
+
+Questions:
+1. acidification vs warming effect, and combined - additive? synergistic?
+2. generational changes, gene expression shifts - what happens between each generation?
+3. time course of gene expression or alleles
+4. Using busco (sp?) to tell how complete transcriptome assembly is
+
+fastq = .fq.gz
+
+Processing pipeline:
+1. fastq -> FastQC -> html -> local machine (quality report)
+2. fastq -> Trimmomatic -> clean.fq.gz files (trimming based on quality report)
+3. clean.fq.gz -> FastQC (make sure trimming worked)
+4. clean.fq.gz -> Trinity -> ref.fa (reference transcriptome)
+5. ref.fa -> quality checks, etc. before it's the final one
+6. ref.fa + clean.fq.gz -> Salmon -> counts.txt (data frame of samples and genes)
+  a. counts.txt - Number of reads in sample that match given transcriptome
+7. counts.txt -> DESeq2 (R program, test differences in gene expression)
+8. ref.fa + clean.fq.gz -> bwamem -> .sam (sequence alignment files) -> .bam
+  a. looking at SNPs at given nucleotide position, get freqeuncy of each allele within sample
+9. .bam -> program like VarScan (scan for variants) -> .vcf (entry for every polymorphism)
+10. .vcf -> CMH test statistic (looks for consistent differences in allele frequency)
+
+doing Warming F2 (HA_F2)
+
+Wildcard - *, grabs anything with that
+  can check with echo
+
+fastqc HA_F2* --outdir=/data/project_data/RNAseq/fastqc
+
 
