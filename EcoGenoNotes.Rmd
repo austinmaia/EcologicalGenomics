@@ -206,4 +206,42 @@ Wildcard - *, grabs anything with that
 
 fastqc HA_F2* --outdir=/data/project_data/RNAseq/fastqc
 
+## Tutorial 2
 
+### Make a script:
+vim [title].sh
+'i' for insert/to start type
+#!/bin/bash
+
+Leave and write file:
+[esc]
+:wq!
+
+black=non-executable, green=executable
+make it executable: chmod u+x test.sh
+
+Run script: ./test.sh
+
+### Check number of html files
+ll *.html | wc -l
+
+## Workflow:
+raw fq.qz -> FastQC -> html -> MultiQC -> .html
+raw fq.qz -> Trimmomatic -> (clean) qc.fq.qz -> FastQC -> MultiQC
+
+Clean data seems to still have hexamer primers at start - messing with per base sequence data in MultiQC
+  Melissa fixed! did HEADCROP on 12 bases (should have removed)
+  
+Cleaned FastQ -> Trinity/Transcriptome assembly 
+Transcriptome assembly + cleaned fastq -> Map/align reads to transcriptome
+
+Mapping -
+  -Salmon -> alignment free mapping (uses kmers/unique sets of nucleotides to find probability wise where transcriptome will fall)
+  -Alignment (like bwa and bowtie2) -> .sam files; actually aligning and finding matches
+  
+Can also map to well-annotated genome or closely related species, instead of transcriptome
+
+We're going to be looking at counts.txt generation 21 of transplant experiment while troubleshooting is happening
+AA - ambient condition, HH - high temp high c02
+
+  

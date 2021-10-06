@@ -299,8 +299,41 @@ summary {
 –m-metadata-column site-animal-health<br />
 –o-visualization core-metrics-results/weighted-unifrac-site-animal-health-significance.qzv<br />
 –p-pairwise</p>
+<p>qiime diversity alpha-rarefaction<br />
+–i-table table.qza<br />
+–i-phylogeny rooted-tree.qza<br />
+–p-max-depth 100000<br />
+–m-metadata-file pyc_manifest<br />
+–o-visualization alpha-rarefaction.qzv</p>
+</div>
+<div id="taxonomic-id" class="section level4">
+<h4>Taxonomic ID</h4>
+<p><a href="https://pespenilab.github.io/Ecological-Genomics/2021_09_27_microbiome_supp_taxaID.html" class="uri">https://pespenilab.github.io/Ecological-Genomics/2021_09_27_microbiome_supp_taxaID.html</a></p>
+<p>qiime feature-classifier classify-sklearn<br />
+–i-classifier /data/project_data/16S/training-feature-classifiers/classifier.qza<br />
+–i-reads /users/m/a/maustin7/myresults/rep-seqs.qza<br />
+–o-classification taxonomy.qza</p>
+<p>qiime taxa barplot<br />
+–i-table table.qza<br />
+–i-taxonomy /users/m/a/maustin7/training-feature-classifiers/taxonomy.qza<br />
+–m-metadata-file pyc_manifest<br />
+–o-visualization taxa-bar-plots.qzv</p>
+<p>Note: look to tutorial for more stats on abundance</p>
 </div>
 </div>
+</div>
+</div>
+<div id="rnaseq" class="section level1">
+<h1>RNASeq</h1>
+<div id="tutorial-1-1" class="section level2">
+<h2>Tutorial 1</h2>
+<p>Identify SNPs from RNASeq data Looking at 4 conditions of Acartia Hudsonica: 1. ocean acidification (1000 micro-atm pCO2, ambient temperature, 13 degrees C) 2. ocean warming (15 degrees C, 400 micro-atm pCO2) 3. combined ocean acidification and warming (1000 micro-atm pCO2, 15 degrees C) 4. ambient (13 degrees C, 400 micro-atm pCO2)</p>
+<p>Questions: 1. acidification vs warming effect, and combined - additive? synergistic? 2. generational changes, gene expression shifts - what happens between each generation? 3. time course of gene expression or alleles 4. Using busco (sp?) to tell how complete transcriptome assembly is</p>
+<p>fastq = .fq.gz</p>
+<p>Processing pipeline: 1. fastq -&gt; FastQC -&gt; html -&gt; local machine (quality report) 2. fastq -&gt; Trimmomatic -&gt; clean.fq.gz files (trimming based on quality report) 3. clean.fq.gz -&gt; FastQC (make sure trimming worked) 4. clean.fq.gz -&gt; Trinity -&gt; ref.fa (reference transcriptome) 5. ref.fa -&gt; quality checks, etc. before it’s the final one 6. ref.fa + clean.fq.gz -&gt; Salmon -&gt; counts.txt (data frame of samples and genes) a. counts.txt - Number of reads in sample that match given transcriptome 7. counts.txt -&gt; DESeq2 (R program, test differences in gene expression) 8. ref.fa + clean.fq.gz -&gt; bwamem -&gt; .sam (sequence alignment files) -&gt; .bam a. looking at SNPs at given nucleotide position, get freqeuncy of each allele within sample 9. .bam -&gt; program like VarScan (scan for variants) -&gt; .vcf (entry for every polymorphism) 10. .vcf -&gt; CMH test statistic (looks for consistent differences in allele frequency)</p>
+<p>doing Warming F2 (HA_F2)</p>
+<p>Wildcard - *, grabs anything with that can check with echo</p>
+<p>fastqc HA_F2* –outdir=/data/project_data/RNAseq/fastqc</p>
 </div>
 </div>
 
