@@ -244,4 +244,64 @@ Can also map to well-annotated genome or closely related species, instead of tra
 We're going to be looking at counts.txt generation 21 of transplant experiment while troubleshooting is happening
 AA - ambient condition, HH - high temp high c02
 
+See deseq2 R script for instructions!
+
+
+Model - simplified representation of reality
+
+counts ~ line, environment, interaction(line:environment)
+Negative binomial GLM (generalized linear model)
+
+LRT - Full or reduced model
+
+# PopGen
+Module 1 - microbiome
+  -assessing species/taxa level diversity
+  -how environment shapes community diversity
+  -AmpliconSeq approach
+Module 2 - Transcriptomics
+  -RNASeq
+  -assay across transcriptome to get levels of gene expression
+  -responses to experimental evolution and environmental treatment
+Module 3 - population and landscape genomics
+  -assessing levels of genomic diversity across genome (DNA, not RNA)
+  -whole genome sequencing
+  -library prep across whole genome!
+
+What defines a population?
+  high degree of mating (random) within group -> recombination
+  topographical barriers
+  pre- and post-zygotic barriers? (flowering time)
+  genetic drift (small effective population size (Ne), more likely to undergo genetic drift)
+  local adaptation -> hybrids selected against
+
+Genetic landscape (across chromosome) is very heterogeneous
+  Tend to see selection at areas with extremes (high expression or low expression)
+  Hitchhiking - nearby/linked variants to selected variant change with variant
   
+Fst - how much two populations differ
+  s = subpopulation, t = total, F = inbreeding
+  spatial structure causes type of inbreeding
+  H(T) - H(S) / H(T) (heterozygosity in total pop. vs. subpop)
+  0 > Fst > 1
+  
+Islands of divergence between populations within species/taxa, often said to be contributing to reproductive isolation
+
+Gets complicated very fast - rare to get to absolute certainty
+
+look for papers that talk about some of these dynamics (gene flow/recombination in spatial contexts, local adaptation)  
+  
+## Tutorial 1
+Looking at poplar tree hybrid zone and admixture
+Ecologically and genetically diverse
+Compact genome (about 1/6 size of human genome)
+Diploid
+
+What questions can we ask?
+1. is there a genomic correlation with the climate data? Is there a clear hybrid zone? 
+2. Differnetiation along transects 
+3. phylogenetic trees?
+4. plasticity amongst transplant sites
+5. succession/forest fire effects
+
+
