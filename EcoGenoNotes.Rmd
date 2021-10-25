@@ -255,6 +255,7 @@ Negative binomial GLM (generalized linear model)
 LRT - Full or reduced model
 
 # PopGen
+## Tutorial 1 - Background
 Module 1 - microbiome
   -assessing species/taxa level diversity
   -how environment shapes community diversity
@@ -291,7 +292,6 @@ Gets complicated very fast - rare to get to absolute certainty
 
 look for papers that talk about some of these dynamics (gene flow/recombination in spatial contexts, local adaptation)  
   
-## Tutorial 1
 Looking at poplar tree hybrid zone and admixture
 Ecologically and genetically diverse
 Compact genome (about 1/6 size of human genome)
@@ -304,4 +304,114 @@ What questions can we ask?
 4. plasticity amongst transplant sites
 5. succession/forest fire effects
 
+Processing Pipeline (pre-class)
+fastq files - [Trimmomatic (remove adapters, trim bp < Q30)] -> cleaned fastq - [bwa (take reads and align/map to reference)] -> bam (binary alignment files) - [GATK] -> VCF (variant call format) - [VCFTools (filtering by minor allele frequency)] -> filtered VCF - [BEAGLE (imputation/filling in missing values)] -> Final VCF!
 
+VCF - just variant sites; tells you specific BP, if homo/heterozygote for reference allele and for variant allele
+
+Minor allele frequency - whichever allele at a given site is the rarer of the two; map between 0 and 0.5, will have more around 0
+  -sequencing errors will occur around 0; need to filter!
+  -our cutoff - 0.002
+
+10% missingness - given SNP position needed to be present in at least 90% of the samples
+
+## Tutorial 2
+view zipped file head - zcat poplar_hybrids.vcf.gz | head -n 11
+  | pipe - merge 2 commands
+  
+vcftools --[filetype] [filename]
+  vcftools --gzvcf poplar_hybrids.vcf.gz
+  NOT changing file, just looking
+We have 576 samples - ~ 5 million SNPs
+Most people will go between 0.08 and 0.05 - very little difference
+Lowest minor allele frequency will be  (1/2*sample number)
+
+grep - regular expression command; search for pattern
+grep "Alaska" Combined_Transect_Sampling_Data_2020.txt | cutoff -f1
+  Print all sample IDs from Alaska transect
+
+vcftools --gzvcf poplar_hybrids.vcf.gz --maf 0.05 --recode --out poplar_hybrids_maf05
+
+k = 3
+see bashscript admixturetest.sh - missing a few steps for directory manip here
+
+Thin out linkage disequilibrium:
+plink2 --vcf $VCF \
+--threads 3 \
+--double-id \ 
+--allow-extra-chr \
+--set-missing-var-ids @:# \
+--indep-pairwise 50 10 0.1 \ #using window of 50,000 bp, thin out any with LD score greater than 0.1
+--out poplar_hybrids_noLD
+
+convert from VCF to admixture:
+plink2 --vcf $VCF \
+--threads 3 \
+--allow-extra-chr \
+--make-bed \
+--out Admixture/$FILE 
+
+subset for no LD SNPs:
+plink2 --bfile Admixture/$FILE \ 
+--threads 3 \
+--allow-extra-chr \
+--set-missing-var-ids @:# \
+--extract poplar_hybrids_noLD.prune.in \
+--make-bed \
+--out Admixture/$FILE.LDpruned 
+
+Run Admixture:
+K=<your value>
+admixture -j3 --cv $FILE2.bed $K >log${K}.out
+
+Can do loop of values:
+for K in {2..5}
+do
+ admixture -j3 --cv $FILE2.bed $K >log${K}.out
+done
+
+Take .Q file
+Input into R script:
+library(maps)  # If you don't have this library, you'll need to run install.packages("maps") first
+library(plotrix) # If you don't have this library, you'll need to run install.packages("plotrix") first
+
+setwd()  #set the path to where your downloaded files are on your laptop
+
+meta <- read.table("Combined_Transect_Sampling_Data_2020.txt", sep="\t",header=T)  
+
+Qscores <- read.table("yourfilename.Q", sep=" ",header=F)
+names(Qscores) <- c("K1","K2", ...)  # Customize to your level of K!
+
+tiff("Admix.tiff", width = 10, height = 7, units = "in",
+     res = 300)
+map("world",xlim=c(-160,-100),ylim=c(40,70),fill=T, col="lightgrey")
+
+title("Admixture K=X") # Change for your value of K
+map.axes(cex.axis=1.5)
+for(i in 1:nrow(meta)){
+  floating.pie(meta$Longitude[i], meta$Latitude[i], 
+               c(Qscores$K1[i],Qscores$K2[i],...),
+               col=c("yellow","green",...),
+               radius=0.5)
+}
+
+# Customize the above to your level of K wherever you see the ellipses (...)!
+
+dev.off()
+
+CROSS VALIDATION ERROR
+grep "CV" log3.out
+
+K   CV
+2   0.5146
+3   0.50303
+4   0.49744
+5   0.49513
+6   0.49514
+7   0.49567
+8   0.49540
+
+The higher the admixture (diversity of ancestry scores), the more genome-wide heterozygosity we expect to see
+
+Going to use K=5 - lowest cv error
+see k5het.R script
