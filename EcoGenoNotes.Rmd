@@ -372,6 +372,7 @@ done
 
 Take .Q file
 Input into R script:
+```{r}
 library(maps)  # If you don't have this library, you'll need to run install.packages("maps") first
 library(plotrix) # If you don't have this library, you'll need to run install.packages("plotrix") first
 
@@ -398,7 +399,7 @@ for(i in 1:nrow(meta)){
 # Customize the above to your level of K wherever you see the ellipses (...)!
 
 dev.off()
-
+```
 CROSS VALIDATION ERROR
 grep "CV" log3.out
 
@@ -415,3 +416,180 @@ The higher the admixture (diversity of ancestry scores), the more genome-wide he
 
 Going to use K=5 - lowest cv error
 see k5het.R script
+
+Natural selection effects on diversity:
+  directional - reduces diversity
+  balancing - neutralizes/maintains diversity
+  local adaptation - directional selection, context dependent
+  Background selection - don't see selective sweep
+
+Questions: “What genomic regions experienced recent strong selection in poplar, and do they show evidence of reduced divergence between the species, consistent with introgression?”
+ 
+What predictions might we make for our poplar hybrid zone?
+- dip in Fst (genetic divergence thats minimized where that gene is crossing over)
+- peak in Fst
+- depends on dynamics of selection
+
+Using RAISD
+1) diversity reduced
+2) increased LD ("hitch-hiked")
+3) skew in allele frequency distribution
+
+Pick a chromosome! Use VCFtools to parse just chromosome of interest
+Chr0X -> [VCFtools] -> parsed vcf -> [GREP] centromere coordinates for chromosome -> [RAISD analysis] -> outputs (u)
+
+[VCFtools] -> nucleotide diversity + Fst
+
+admixture file with K=5 has percentage ancestry for each of 5 groups; K=4 is balsimifera, everything else is Trichocarpa or hybrid
+
+Chromosome extraction - 
+see chromosomeVCF.sh
+
+Visualize - 
+```{r}
+library(ggplot2)
+library(gridExtra) # If needed, install.packages("gridExtra")
+
+setwd("~/Documents/GitHub/EcologicalGenomics/Chr04")
+
+pi <- read.table("Chr04.windowed.pi",sep="\t", header=T)
+str(pi)
+
+fst <- read.table("Bals_Tricho_All.windowed.weir.fst", sep="\t",header=T)
+str(fst)
+
+cent <- read.table("Chr04_centromere.txt", sep="\t",header=F)
+centromere = mean(c(cent$V2,cent$V3))
+
+raisd <- read.table("RAiSD_Report.Chr04.Chr04", sep="\t",header=F)
+str(raisd)
+
+p1 <- ggplot(pi,aes(x=BIN_START,y=PI/mean(PI))) +
+  geom_line(size=0.25, color="blue") + 
+  geom_point(aes(x=centromere,y=1, size=100), show.legend=F) +
+  xlim(0,max(pi$BIN_START)) +
+  ggtitle("Chomosome 4: Nucleotide diversity and Fst in 10kb sliding windows") +
+  xlab("") +
+  ylab("Scaled nucleotide diversity")
+
+p2 <- ggplot(fst,aes(x=BIN_START,y=MEAN_FST/mean(MEAN_FST))) +
+  geom_line(size=0.25, color="red") +
+  geom_point(aes(x=centromere,y=1, size=100), show.legend=F) +
+  xlim(0,max(fst$BIN_START)) + 
+  ylab("Scaled Fst")
+
+p3 <- ggplot(raisd,aes(x=V1,y=V7/mean(V7))) +
+  geom_point(size=0.25, color="black") +
+  xlim(0,max(raisd$V3)) + 
+  xlab("Position along chromosome (bp)") +
+  ylab("RAiSD u-stat")
+
+grid.arrange(p1, p2, p3, nrow = 3)
+```
+
+Paralogs vs introgression
+  Paralog - duplication event along the chromosome, second copy of given gene
+  
+Neutral case - genetic drift; cross over of B allele into A allele line and vice versa
+  PI = variable; average
+  Fst = average
+Non-neutral case - B allele crosses over and dominates over A
+  PI = low
+  Fst = low
+
+RAiSD Plot - single plot for each SNP; higher values=higher likelihood of selective sweep
+
+Chromosome 9 -
+  High RAiSD at dip of SNP diversity (PI) and Fst
+  
+So far, we have for each chromosome:
+  RAiSD tests for selective sweeps
+  Fst in slideing windows of 50 kb
+  Nucleotide diversity in sliding windows of 50 kb
+
+Need to define bins in RAiSD based on significant outliers
+  choose threshold - above that threshold, looks like outlier
+  define bins based on either side of that band of SNPs
+  
+  Also set threshold for low Fst
+    treat windows of very low Fst as outlier bins
+
+Observed overlap (Fst, RAiSD) vs. expected
+  Permutation - randomize correlation across chromosome
+    Shuffle order of outlier bins
+    get frequency distribution of number of overlaps
+  where does observed overlap fall within permutation distribution?
+    if significant, will be in upper tail (alpha = 0.05), one-tailed test
+  
+
+Potential ways for shared alleles
+  -adaptive introgression (crossover from one population to the other, allele B is universally beneficial)
+  -ancestral polymorphism (both received allele B from common ancestor)
+
+Local Ancestry Inference (LAI) can help differentiate
+
+## Tutorial 6
+Install Loter
+Our pipeline:
+  -Extract “reference” individuals with high ancestry assignments to     either Balsam (K4>0.99) or Tricho ([K1+K2+K5]>0.99. Exclude inds assigned to “Populus spp.” (K3>0.5).
+  -Use VCFtools to parse our vcf files by ancestry group. NOTE: We’ll do this separately by your chromosome to keep things computationally efficient.
+  -Run Loter for 1 admixed sample at a time to estimate LAI. Working on 1 sample at a time will reduce memory requirements on the server.
+
+See lai.sh
+
+Sample sizes:
+  Admx   Bals PopSpp Tricho 
+   442     46      8     80 
+
+vim 201_LAI.txt
+  Balsam = 0
+  Tricho = 1
+
+Want to change it to diploid so that for each position, individual can be 0, 1, 2 
+  0 = Homozygote (Balsimifera)
+  1 = Heterozygote
+  2 = Homozygote (Tricho)
+
+Using datamash to convert haploid calls to diploid calls
+
+Pipeline:
+1. Convert haploid 0/1 calls to diploid 0/1/2 calls
+2. Collate 0/1/2 data across all admixed individuals into a single data matrix
+3. Convert matrix to Plink2.0 format (*.bed file)
+4. Estimate frequencies of local ancestry along chromosomes
+
+Plink conversion - dummy alleles A and T
+snpID Allele1 Allele2 [N inds (442) 1 0 2 ... 1]
+snp01   A       T       1 0 2 ...
+snp02   A       T
+... N sites (~10^5)
+
+Doing phenotypic association - like GWAS, but using ancestry proportion to predict phenotype, not SNPs
+
+measured the following phenotypes 
+  (1) Bud flush – the day of year when leaves emerge from buds in spring
+  (2) Bud set – the day of year in late-summer/fall when the apical meristem transitions to dormancy and forms an overwintering bud
+  (3) Rust infection – a rank ordinal assessment of disease severity caused by the fungal rust pathogen, Melampsora spp.
+
+All traits were measured during 2021, and random effects ANOVA was used to estimate best lienar unbiased predictors (BLUPs) for each genotype. BLUPs have a mean of zero, and represent a genotype’s phenotypic deviation from the mean of the entire group.
+
+Admixture mapping equation - each individual's phenotype is function of locus-specific ancestry effect
+    comparing 3 classes of means
+    under additive model, assumption is the effect of substituting 1 copy has affect on phenotype
+
+Pipeline:
+1. Wrangle the phenotype data from the common gardens to get just the data for the admixed individuals we ran Loter on
+2. Get genome-wide ancestry for those same individuals (based off the K=5 model, subsetting for just the balsamifera Q value)
+3. Run Admixture mapping in Plink
+4. Bring the results into R and visualize
+
+if two traits are independent, substituting 
+
+
+
+
+
+
+
+
+  
