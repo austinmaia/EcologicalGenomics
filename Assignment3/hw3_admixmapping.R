@@ -59,6 +59,7 @@ plotDD0
 #Tricho ancestry take longer to break bud in spring than bals (in same environment)
 #populations that have evolved in warmer climates tend to require more heat in spring to bud
 
+
 grid.arrange(plotGDD, plotff, plotDD0, nrow = 3)
 
 # linear models testing trait ~ genome-wide admixture association
@@ -188,6 +189,19 @@ p3 <- ggplot(med_DD02,aes(x=POS,y=-1*log10(P))) +
 p3
 
 grid.arrange(p1, p2, p3, nrow = 3)
+# Bud Flush
+budflush <- read.table("plink2.FLUSH.glm.linear",skip=1,sep="\t",header=F)
+names(budflush) = c("CHROM",    "POS",  "ID",   "REF",  "ALT",  "A1",   "TEST", "OBS_CT",   "BETA", "SE",   "T_STAT",   "P")
+budflush <- budflush[which(budflush$TEST=="ADD"),]
+budflush2 <- cbind(snps, budflush[,-c(1,2)])
+budflush2$outlier = ifelse(budflush2$P<quantile(budflush2$P,0.001),2,1)
+p5 <- ggplot(budflush2,aes(x=POS,y=-1*log10(P))) +
+  geom_point(size=budflush2$outlier, color=budflush2$outlier) + 
+  xlab("Position (bp) along chromosome") +
+  ylab("-log10 P-value") +
+  ggtitle("Bud flush")
+
+p5
 
 # Get outliers for a given trait association:
 
@@ -238,7 +252,7 @@ p4 <- ggplot(AF3[,-3],aes(x=window,y=AvgAncFreq)) +
 p4
 
 
-grid.arrange(p1, p2, p3, p4, nrow = 4)
+grid.arrange(p1, p2, p3, p5, p4, nrow = 5)
 
 # Get the betas from each trait and look at pleiotropy between traits
 betas <- cbind(mean_cGDDfreeze[,c(1:3,9)],mean_finalFreeze2[,9],med_DD02[,9])
@@ -261,6 +275,90 @@ p5 <- ggplot(betas,aes(x=beta_med_DD0,y=beta_mean_finalFreeze)) +
 
 p5
 
+# Question 2 - compare to budflush
+budflush <- read.table("plink2.FLUSH.glm.linear",skip=1,sep="\t",header=F)
+names(budflush) = c("CHROM",    "POS",  "ID",   "REF",  "ALT",  "A1",   "TEST", "OBS_CT",   "BETA", "SE",   "T_STAT",   "P")
+budflush <- budflush[which(budflush$TEST=="ADD"),]
+budflush2 <- cbind(snps, budflush[,-c(1,2)])
+budflush2$outlier = ifelse(budflush2$P<quantile(budflush2$P,0.01),2,1)
+budflushGR <- GRanges(CHR,IRanges(budflush2$POS-2.5e4,budflush2$POS+2.5e4),POS=budflush2$POS, P=budflush2$P, outlier=budflush2$outlier)
+budflushGRout <- unlist(reduce(split(budflushGR, ~outlier)))
+budflushGRout$outlier <- names(budflushGRout)
+budflushGRCand <- subset(budflushGRout, outlier==2)
+
+budflushGRCand # Print the candidate regions
+
+
+#cGDDfreeze vs bud flush
+mean_cGDDfreeze2$outlier <- ifelse(mean_cGDDfreeze2$P<quantile(mean_cGDDfreeze2$P,0.01),2,1)
+cGDDGR <- GRanges(CHR,IRanges(mean_cGDDfreeze2$POS-2.5e4,mean_cGDDfreeze2$POS+2.5e4),POS=mean_cGDDfreeze2$POS, P=mean_cGDDfreeze2$P, outlier=mean_cGDDfreeze2$outlier)
+
+cGDDGRout <- unlist(reduce(split(cGDDGR, ~outlier)))
+cGDDGRout$outlier <- names(cGDDGRout)
+cGDDGGRCand <- subset(cGDDGRout, outlier==2)
+
+cGDDGGRCand # Print the candidate regions
+
+overlap_BF_cGDD <- subsetByOverlaps(budflushGRCand, cGDDGGRCand)
+length(overlap_BF_cGDD) #1
+
+overlap_BF_cGDD # Print the overlapping regions
+# 2    Chr04 15846628-15983524      * |           2
+
+
+#final Freeze vs budflsuh
+mean_finalFreeze2$outlier <- ifelse(mean_finalFreeze2$P<quantile(mean_finalFreeze2$P,0.01),2,1)
+FFGR <- GRanges(CHR,IRanges(mean_finalFreeze2$POS-2.5e4,mean_finalFreeze2$POS+2.5e4),POS=mean_finalFreeze2$POS, P=mean_finalFreeze2$P, outlier=mean_finalFreeze2$outlier)
+
+FFGRout <- unlist(reduce(split(FFGR, ~outlier)))
+FFGRout$outlier <- names(FFGRout)
+FFGRCand <- subset(FFGRout, outlier==2)
+
+FFGRCand # Print the candidate regions
+
+overlap_BF_fFReeze <- subsetByOverlaps(budflushGRCand, FFGRCand)
+length(overlap_BF_fFReeze) #0
+
+overlap_BF_fFReeze # Print the overlapping regions
+# none
+
+#DD02 vs bud flush
+med_DD02$outlier <- ifelse(med_DD02$P<quantile(med_DD02$P,0.01),2,1)
+DD0GR <- GRanges(CHR,IRanges(med_DD02$POS-2.5e4,med_DD02$POS+2.5e4),POS=med_DD02$POS, P=med_DD02$P, outlier=med_DD02$outlier)
+
+DD0GRout <- unlist(reduce(split(DD0GR, ~outlier)))
+DD0GRout$outlier <- names(DD0GRout)
+DD0GRCand <- subset(DD0GRout, outlier==2)
+
+DD0GRCand
+
+overlap_BF_DD0 <- subsetByOverlaps(budflushGRCand, DD0GRCand)
+length(overlap_BF_DD0) #0
+
+overlap_BF_DD0
+# none
+
+
+# cGDD vs FF
+overlap_FF_cGDD <- subsetByOverlaps(FFGRCand, cGDDGGRCand)
+length(overlap_FF_cGDD) #3
+overlap_FF_cGDD
+# <Rle>         <IRanges>  <Rle> | <character>
+#   2    Chr04 16225760-16416005      * |           2
+# 2    Chr04 16469913-16520663      * |           2
+# 2    Chr04 16802561-17046870      * |           2
+
+# cGDD vs DD0
+overlap_DD0_cGDD <- subsetByOverlaps(DD0GRCand, cGDDGGRCand)
+length(overlap_DD0_cGDD) #0
+
+# DD0 vs FF
+overlap_DD0_FF <- subsetByOverlaps(DD0GRCand, FFGRCand)
+length(overlap_DD0_FF) #1
+overlap_DD0_FF
+#  2    Chr04 7958449-8411139      * |           2
+
+
 ##Enchrichment analysis
 
 # Import the GFF annotation file and make a transcript database
@@ -277,18 +375,17 @@ genes <- unlist(reduce(transcriptsBy(txdb, by="gene")))
 #GRanges object with 2078 ranges and 1 metadata column
 genes$geneID <- names(genes)
 
-mean_cGDDfreeze_outliers2 <- mean_cGDDfreeze2[which(mean_cGDDfreeze2$outlier==2),c(1,2,3,9)]
-mean_finalFreeze_outliers2 <- mean_finalFreeze2[which(mean_finalFreeze2$outlier==2),c(1,2,3,9)]
-med_DD0_outliers2 <- med_DD02[which(med_DD02$outlier==2),c(1,2,3,9)]
+candcGDD <- subsetByOverlaps(genes, cGDDGGRCand)
+write.table(candcGDD$geneID, paste0("candGenescGDD",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
 
-outlier_range_cGDD <- makeGRangesFromDataFrame(mean_cGDDfreeze_outliers2, seqnames = 'CHROM', start.field = 'POS', end.field = 'POS')
-candGenesCGGD <- subsetByOverlaps(genes, outlier_range_cGDD)
-write.table(candGenesCGGD$geneID, paste0("candGenesCGDD",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
+candFF <- subsetByOverlaps(genes, FFGRCand)
+write.table(candFF$geneID, paste0("candGenesFF",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
 
-outlier_range_finalFreeze <- makeGRangesFromDataFrame(mean_finalFreeze_outliers2, seqnames = 'CHROM', start.field = 'POS', end.field = 'POS')
-candGenesFF <- subsetByOverlaps(genes, outlier_range_finalFreeze)
-write.table(candGenesFF$geneID, paste0("candGenesFF",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
+candDD0 <- subsetByOverlaps(genes, DD0GRCand)
+write.table(candDD0$geneID, paste0("candGenesDD0",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
 
-outlier_range_dd0 <- makeGRangesFromDataFrame(med_DD0_outliers2, seqnames = 'CHROM', start.field = 'POS', end.field = 'POS')
-candGenesDD <- subsetByOverlaps(genes, outlier_range_dd0)
-write.table(candGenesDD$geneID, paste0("candGenesDD",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
+candBF <- subsetByOverlaps(genes, budflushGRCand)
+write.table(candBF$geneID, paste0("candGenesBudFlush",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
+
+candoverlap <- subsetByOverlaps(genes, overlap_BF_cGDD)
+write.table(candoverlap$geneID, paste0("candGenesBudFlushcGDDOverlap",CHR,".txt"), quote=F, col.names=F, row.names=F, sep=",")
