@@ -583,7 +583,6 @@ Pipeline:
 3. Run Admixture mapping in Plink
 4. Bring the results into R and visualize
 
-if two traits are independent, substituting 
 
 
 
