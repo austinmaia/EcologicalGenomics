@@ -531,7 +531,7 @@ Local Ancestry Inference (LAI) can help differentiate
 ## Tutorial 6
 Install Loter
 Our pipeline:
-  -Extract “reference” individuals with high ancestry assignments to     either Balsam (K4>0.99) or Tricho ([K1+K2+K5]>0.99. Exclude inds assigned to “Populus spp.” (K3>0.5).
+  -Extract “reference” individuals with high ancestry assignments to either Balsam (K4>0.99) or Tricho ([K1+K2+K5]>0.99. Exclude inds assigned to “Populus spp.” (K3>0.5).
   -Use VCFtools to parse our vcf files by ancestry group. NOTE: We’ll do this separately by your chromosome to keep things computationally efficient.
   -Run Loter for 1 admixed sample at a time to estimate LAI. Working on 1 sample at a time will reduce memory requirements on the server.
 

@@ -58,7 +58,9 @@ hist(apply(countsTableRound, 1, mean), xlim=c(50000,150000),ylim=c(0,10), breaks
 
 dds <- DESeqDataSetFromMatrix(countData=countsTableRound, 
                               colData=conds, 
-                              design=~line+environment+line:environment) #[cond]:[cond] = interaction
+                              design=~line+
+                                environment+
+                                line:environment) #[cond]:[cond] = interaction
 
 dim(dds)
 
@@ -91,25 +93,6 @@ ggplot(data, aes(PC1,PC2,color=environment,shape=line)) +
   theme_minimal()
 
 ### Order and summarize results from specific contrasts
-
-#### INTERACTION EFFECT ####
-
-resInteraction <- results(dds, alpha=0.05)
-resInteraction <- resInteraction[order(resInteraction$padj),]
-head(resInteraction)
-summary(resInteraction)
-# out of 24362 with nonzero total read count
-# adjusted p-value < 0.05
-# LFC > 0 (up)       : 2839, 12% (NOTE: Increased Log Fold Change)
-# LFC < 0 (down)     : 1053, 4.3% (NOTE: Decreased Log Fold Change)
-# outliers [1]       : 9, 0.037%
-# low counts [2]     : 473, 1.9%
-# (mean count < 18)
-
-# significant interaction: cross of lines b/w conditions
-# significant line: parallel but diff lines b/w conditions
-# significant environment:parallel/equal lines (points clustered)
-
 
 ### ENVIRONMENT EFFECT ###
 dds <- DESeqDataSetFromMatrix(countData = countsTableRound, 
